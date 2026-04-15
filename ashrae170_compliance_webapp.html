@@ -1,0 +1,673 @@
+<h2 class="sr-only">ASHRAE 170-2021 Healthcare Ventilation Compliance Manager — interactive dashboard with pressure room data, flow calculator, humidity log, evidence upload, and PDF export</h2>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.app{display:flex;min-height:600px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden;background:var(--color-background-primary)}
+.sidebar{width:220px;flex-shrink:0;border-right:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary);padding:1rem 0}
+.sidebar-logo{padding:0 1rem 1rem;border-bottom:0.5px solid var(--color-border-tertiary);margin-bottom:0.75rem}
+.sidebar-logo .title{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.sidebar-logo .sub{font-size:11px;color:var(--color-text-secondary)}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 1rem;font-size:13px;cursor:pointer;color:var(--color-text-secondary);border-left:2px solid transparent;transition:all 0.15s}
+.nav-item:hover{background:var(--color-background-primary);color:var(--color-text-primary)}
+.nav-item.active{color:#185FA5;border-left:2px solid #185FA5;background:var(--color-background-primary);font-weight:500}
+.nav-icon{width:16px;height:16px;flex-shrink:0}
+.main{flex:1;overflow-y:auto;padding:1.5rem}
+.page{display:none}.page.active{display:block}
+.page-title{font-size:18px;font-weight:500;color:var(--color-text-primary);margin-bottom:0.25rem}
+.page-sub{font-size:13px;color:var(--color-text-secondary);margin-bottom:1.5rem}
+.metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:1.5rem}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem;text-align:center}
+.metric-val{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.metric-lbl{font-size:12px;color:var(--color-text-secondary);margin-top:4px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1.25rem;margin-bottom:1rem}
+.card-title{font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:0.75rem;display:flex;align-items:center;gap:8px}
+.badge{font-size:11px;padding:2px 8px;border-radius:var(--border-radius-md);font-weight:500}
+.badge-pos{background:#E6F1FB;color:#185FA5}
+.badge-neg{background:#FCEBEB;color:#A32D2D}
+.badge-nr{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+.badge-ok{background:#EAF3DE;color:#3B6D11}
+.badge-warn{background:#FAEEDA;color:#854F0B}
+.room-table{width:100%;border-collapse:collapse;font-size:12px}
+.room-table th{text-align:left;padding:6px 8px;font-weight:500;font-size:11px;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);text-transform:uppercase;letter-spacing:0.03em}
+.room-table td{padding:7px 8px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);vertical-align:top}
+.room-table tr:last-child td{border-bottom:none}
+.room-table .note{font-size:11px;color:var(--color-text-secondary);font-style:italic;margin-top:3px}
+.quote{font-size:11px;background:var(--color-background-secondary);border-left:2px solid #185FA5;padding:6px 10px;border-radius:0 var(--border-radius-md) var(--border-radius-md) 0;color:var(--color-text-secondary);margin-top:6px}
+.section-sep{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;padding:10px 8px 4px;border-top:0.5px solid var(--color-border-tertiary);margin-top:4px}
+.calc-row{display:flex;align-items:center;gap:12px;margin-bottom:1rem;flex-wrap:wrap}
+.calc-row label{font-size:13px;color:var(--color-text-secondary);min-width:160px}
+.calc-row input{width:120px;padding:6px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary)}
+.calc-result{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem;margin-top:0.5rem}
+.result-val{font-size:22px;font-weight:500}
+.result-status{font-size:13px;margin-top:4px}
+.comply{color:#3B6D11}.fail{color:#A32D2D}.neutral{color:#185FA5}
+.rh-table{width:100%;border-collapse:collapse;font-size:13px}
+.rh-table th{padding:8px 10px;text-align:left;font-weight:500;font-size:11px;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);text-transform:uppercase}
+.rh-table td{padding:8px 10px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.rh-table tr:last-child td{border-bottom:none}
+.rh-bar{display:flex;align-items:center;gap:8px}
+.rh-fill{height:8px;border-radius:4px;background:#B5D4F4}
+.upload-zone{border:1px dashed var(--color-border-secondary);border-radius:var(--border-radius-lg);padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem;transition:background 0.15s}
+.upload-zone:hover{background:var(--color-background-secondary)}
+.upload-zone p{font-size:13px;color:var(--color-text-secondary);margin-top:8px}
+.file-list{list-style:none;margin-bottom:1rem}
+.file-list li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary);font-size:13px}
+.file-icon{width:28px;height:28px;border-radius:var(--border-radius-md);background:#E6F1FB;display:flex;align-items:center;justify-content:center;font-size:11px;color:#185FA5;font-weight:500;flex-shrink:0}
+.action-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:1rem}
+.btn{padding:8px 16px;border-radius:var(--border-radius-md);font-size:13px;cursor:pointer;border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary);font-weight:500}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-primary{background:#185FA5;color:#fff;border-color:#185FA5}
+.btn-primary:hover{background:#0C447C}
+.report-table{width:100%;border-collapse:collapse;font-size:12px}
+.report-table th{padding:7px 8px;text-align:left;font-size:11px;font-weight:500;color:var(--color-text-secondary);border-bottom:0.5px solid var(--color-border-tertiary);text-transform:uppercase}
+.report-table td{padding:7px 8px;border-bottom:0.5px solid var(--color-border-tertiary);vertical-align:top}
+.report-table tr:last-child td{border-bottom:none}
+.timeline-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.dot-done{background:#639922}
+.dot-plan{background:#EF9F27}
+.dot-future{background:#B4B2A9}
+.warn-box{background:#FAEEDA;border:0.5px solid #FAC775;border-radius:var(--border-radius-md);padding:0.75rem 1rem;font-size:12px;color:#633806;margin-bottom:1rem}
+.info-box{background:#E6F1FB;border:0.5px solid #B5D4F4;border-radius:var(--border-radius-md);padding:0.75rem 1rem;font-size:12px;color:#185FA5;margin-bottom:1rem}
+select{padding:6px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary)}
+.tabs{display:flex;gap:0;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);overflow:hidden;margin-bottom:1rem;width:fit-content}
+.tab{padding:6px 14px;font-size:12px;cursor:pointer;background:var(--color-background-secondary);color:var(--color-text-secondary);border-right:0.5px solid var(--color-border-tertiary)}
+.tab:last-child{border-right:none}
+.tab.active{background:var(--color-background-primary);color:#185FA5;font-weight:500}
+</style>
+
+<div class="app">
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="title">ASHRAE 170-2021</div>
+    <div class="sub">Ventilation Compliance</div>
+  </div>
+  <div class="nav-item active" onclick="nav('dashboard')">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/></svg>
+    Dashboard
+  </div>
+  <div class="nav-item" onclick="nav('pressure')">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2"/><path d="M8 5v3l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Pressure rooms
+  </div>
+  <div class="nav-item" onclick="nav('calc')">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M5 5h2M5 8h6M5 11h6M9 5h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Flow calculator
+  </div>
+  <div class="nav-item" onclick="nav('humidity')">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 2 C8 2 3 8 3 11a5 5 0 0010 0C13 8 8 2 8 2z" stroke="currentColor" stroke-width="1.2"/></svg>
+    Humidity log
+  </div>
+  <div class="nav-item" onclick="nav('upload')">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="10" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M8 8v4M6 10l2-2 2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Upload evidence
+  </div>
+  <div class="nav-item" onclick="nav('report')">
+    <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="3" y="1" width="10" height="14" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M6 5h4M6 8h4M6 11h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    Corrective report
+  </div>
+  <div style="padding:0 1rem;margin-top:auto;padding-top:1rem">
+    <button class="btn btn-primary" style="width:100%;font-size:12px" onclick="exportPDF()">Export PDF report</button>
+  </div>
+</nav>
+
+<main class="main">
+
+<div id="page-dashboard" class="page active">
+  <div class="page-title">Compliance dashboard</div>
+  <div class="page-sub">ASHRAE/ASHE Standard 170-2021 — Ventilation of Health Care Facilities</div>
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-val" style="color:#3B6D11">72%</div><div class="metric-lbl">Overall compliance</div></div>
+    <div class="metric"><div class="metric-val" style="color:#A32D2D">4</div><div class="metric-lbl">Open findings</div></div>
+    <div class="metric"><div class="metric-val" style="color:#185FA5">18</div><div class="metric-lbl">Rooms monitored</div></div>
+    <div class="metric"><div class="metric-val" style="color:#EF9F27">3</div><div class="metric-lbl">Pending actions</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Compliance by zone — FMS.35 / FMS.36</div>
+    <table class="rh-table">
+      <thead><tr><th>Zone</th><th>Category</th><th>Status</th><th>Standard ref.</th></tr></thead>
+      <tbody>
+        <tr><td>Operating rooms (×4)</td><td>Pressure + RH</td><td><span class="badge badge-ok">Compliant</span></td><td>Table 7-1 / §7.4.1</td></tr>
+        <tr><td>ICU / Critical care</td><td>Pressure + ACH</td><td><span class="badge badge-ok">Compliant</span></td><td>Table 7-1</td></tr>
+        <tr><td>AII isolation rooms</td><td>Negative pressure</td><td><span class="badge badge-warn">Monitoring</span></td><td>§7.2.1</td></tr>
+        <tr><td>CSSD soiled workroom</td><td>Negative pressure</td><td><span class="badge badge-warn">Gap identified</span></td><td>Table 7-1</td></tr>
+        <tr><td>Sterile storage</td><td>Positive + RH ≤60%</td><td><span class="badge badge-ok">Compliant</span></td><td>Table 7-1</td></tr>
+        <tr><td>Emergency triage</td><td>Negative / MERV-8</td><td><span class="badge badge-warn">Gap identified</span></td><td>Table 7-1 / 8-1</td></tr>
+        <tr><td>Nursery / NICU</td><td>RH 30–60%</td><td><span class="badge badge-ok">Compliant</span></td><td>Table 7-1</td></tr>
+        <tr><td>Lab work areas</td><td>Negative / 6 total ACH</td><td><span class="badge badge-warn">Gap identified</span></td><td>Table 7-1 note f</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="warn-box">
+    <strong>Unoccupied turndown reminder (§A1.5 / Table 7-1 note ff):</strong> When turndown mode is active, relative humidity must not exceed 60% RH in any space. Time-delay controls must prevent turndown from activating within 20 minutes of a space becoming unoccupied.
+  </div>
+  <div class="info-box">
+    Standard basis: ANSI/ASHRAE/ASHE Standard 170-2021, supersedes 170-2017. Compliance is mandatory when adopted by the authority having jurisdiction (AHJ) per §4.1.
+  </div>
+</div>
+
+<div id="page-pressure" class="page">
+  <div class="page-title">Pressure rooms — ASHRAE 170 design parameters</div>
+  <div class="page-sub">Extracted from Tables 7-1, 8-1, and 9-1 — FMS.35 reference</div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="pressTab(this,'pt1')">Inpatient (Table 7-1)</div>
+    <div class="tab" onclick="pressTab(this,'pt2')">Outpatient (Table 8-1)</div>
+    <div class="tab" onclick="pressTab(this,'pt3')">Residential (Table 9-1)</div>
+  </div>
+
+  <div id="pt1">
+  <div class="card">
+    <div class="card-title">Clean / soiled utility &amp; CSSD spaces</div>
+    <table class="room-table">
+      <thead><tr><th>Space</th><th>Pressure</th><th>Min OA ach</th><th>Total ach</th><th>Exhaust 100%</th><th>Min filter</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Clean workroom</strong><div class="note">FGI 2.1-2.8.11.2</div></td>
+          <td><span class="badge badge-pos">Positive</span></td><td>2</td><td>NR</td><td>NR</td><td>MERV-8</td>
+        </tr>
+        <tr>
+          <td><strong>Clean supply room</strong><div class="note">FGI 2.1-2.8.11.3</div></td>
+          <td><span class="badge badge-pos">Positive</span></td><td>NR</td><td>NR</td><td>NR</td><td>MERV-8</td>
+        </tr>
+        <tr>
+          <td><strong>Soiled workroom / soiled holding</strong><div class="note">FGI 2.1-2.8.12</div></td>
+          <td><span class="badge badge-neg">Negative</span></td><td>2</td><td>10</td><td>Yes</td><td>MERV-8</td>
+        </tr>
+        <tr>
+          <td><strong>CSSD — clean assembly / workroom</strong><div class="note">FGI 2.1-5.1.2.2[3]</div></td>
+          <td><span class="badge badge-pos">Positive</span></td><td>2</td><td>4</td><td>NR</td><td>MERV-8 (gg)*</td>
+        </tr>
+        <tr>
+          <td><strong>CSSD — soiled workroom / decontamination</strong><div class="note">FGI 2.1-5.1.2.2[2]</div></td>
+          <td><span class="badge badge-neg">Negative</span></td><td>2</td><td>6</td><td>Yes</td><td>MERV-8</td>
+        </tr>
+        <tr>
+          <td><strong>Sterile storage (clean/sterile medical/surgical supplies)</strong><div class="note">FGI 2.1-5.1.2.2[4] — RH max 60%, Temp max 75°F/24°C</div></td>
+          <td><span class="badge badge-pos">Positive</span></td><td>2</td><td>4</td><td>NR</td><td>MERV-8 (gg)*</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="quote">* Note (gg): Minimum MERV-14 filters shall be required for spaces where sterile equipment is packed into sterile packages. Spaces where sterile products are stored but not packed shall not be required to have MERV-14 filters. — Table 7-1 Normative Note (gg)</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Laboratory work areas — Table 7-1</div>
+    <table class="room-table">
+      <thead><tr><th>Space</th><th>Pressure</th><th>Min OA ach</th><th>Total ach</th><th>Exhaust 100%</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Bacteriology / Biochemistry / Cytology / Histology / Microbiology / Nuclear medicine / Serology</strong><div class="note">FGI 2.1-4.1.2</div></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>6</td><td>Yes</td></tr>
+        <tr><td><strong>Glasswashing / Sterilizing</strong></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>10</td><td>Yes</td></tr>
+        <tr><td><strong>Pathology</strong></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>6</td><td>Yes</td></tr>
+        <tr><td><strong>Media transfer</strong></td><td><span class="badge badge-pos">Positive</span></td><td>2</td><td>4</td><td>NR</td></tr>
+        <tr><td><strong>General laboratory</strong></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>6</td><td>NR</td></tr>
+      </tbody>
+    </table>
+    <div class="quote">Note (f): Higher ventilation rates above the total ach listed shall be used when dictated by the laboratory program requirements and the hazard level of the potential contaminants. Lower total ach ventilation rates shall be permitted when a hazard assessment, performed as part of an effective laboratory ventilation management plan per AIHA/ASSE Z9.5, determines that either (1) acceptable exposure concentrations can be achieved with a lower rate or (2) a demand control approach with active sensing of contaminants is used. — Table 7-1 Normative Note (f)</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Emergency triage &amp; trauma rooms — Table 7-1</div>
+    <table class="room-table">
+      <thead><tr><th>Space</th><th>Pressure</th><th>Min OA ach</th><th>Total ach</th><th>Min MERV</th><th>Design RH</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Emergency service triage area</strong><div class="note">FGI 2.2-3.1.3.3</div></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>12</td><td>MERV-8</td><td>Max 60%</td></tr>
+        <tr><td><strong>ED public waiting area</strong><div class="note">FGI 2.2-3.1.2.4</div></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>12</td><td>MERV-8</td><td>Max 65%</td></tr>
+        <tr><td><strong>Emergency dept exam/treatment room</strong><div class="note">FGI 2.2-3.1.2.6</div></td><td><span class="badge badge-nr">NR</span></td><td>2</td><td>6</td><td>MERV-14</td><td>Max 60%</td></tr>
+        <tr><td><strong>Trauma / resuscitation room</strong><div class="note">FGI 2.2-3.1.3.6[4] — first-aid/accident victims</div></td><td><span class="badge badge-pos">Positive</span></td><td>3</td><td>15</td><td>MERV-14</td><td>20–60%</td></tr>
+        <tr><td><strong>ED human decontamination</strong><div class="note">FGI 2.2-3.1.3.6[8]</div></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>12</td><td>MERV-14</td><td>NR</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Operating rooms, isolation &amp; critical care — Table 7-1</div>
+    <table class="room-table">
+      <thead><tr><th>Space</th><th>Pressure</th><th>Min OA ach</th><th>Total ach</th><th>Min MERV</th><th>Design RH</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Operating room</strong><div class="note">FGI 2.2-3.3.3 — §7.4.1 primary diffuser array required</div></td><td><span class="badge badge-pos">Positive</span></td><td>4</td><td>20</td><td>MERV-16 (hh)</td><td>20–60%</td></tr>
+        <tr><td><strong>AII room</strong><div class="note">Min –0.01 in. w.g. (–2.5 Pa) per §7.2.1.d</div></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>12</td><td>MERV-14</td><td>Max 60%</td></tr>
+        <tr><td><strong>Protective environment (PE) room</strong><div class="note">Min +0.01 in. w.g. (+2.5 Pa) per §7.2.2.d</div></td><td><span class="badge badge-pos">Positive</span></td><td>2</td><td>12</td><td>HEPA</td><td>Max 60%</td></tr>
+        <tr><td><strong>Critical care patient care station</strong><div class="note">FGI 2.2-2.6.2 — ICU</div></td><td><span class="badge badge-nr">NR</span></td><td>2</td><td>6</td><td>MERV-14</td><td>30–60%</td></tr>
+        <tr><td><strong>Wound intensive care (burn unit)</strong></td><td><span class="badge badge-pos">Positive</span></td><td>2</td><td>6</td><td>HEPA</td><td>40–60%</td></tr>
+      </tbody>
+    </table>
+    <div class="quote">§7.4.1: "These rooms shall be maintained at a positive pressure with respect to all adjoining spaces at all times. A pressure differential shall be maintained at a value of at least +0.01 in. of water (2.5 Pa)."</div>
+  </div>
+  </div>
+
+  <div id="pt2" style="display:none">
+  <div class="card">
+    <div class="card-title">Specialized outpatient — Table 8-1 (surgery, ED, imaging)</div>
+    <table class="room-table">
+      <thead><tr><th>Space</th><th>Pressure</th><th>OA ach</th><th>Total ach</th><th>Min MERV</th><th>Design RH</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Operating room (outpatient)</strong><div class="note">FGI 2.1-3.2.3</div></td><td><span class="badge badge-pos">Positive</span></td><td>4</td><td>20</td><td>MERV-16 (dd)</td><td>20–60%</td></tr>
+        <tr><td><strong>Procedure room</strong><div class="note">FGI 2.1-3.2.2</div></td><td><span class="badge badge-pos">Positive</span></td><td>3</td><td>15</td><td>MERV-14</td><td>20–60%</td></tr>
+        <tr><td><strong>ED exam/treatment room</strong><div class="note">FGI 2.8-3.4.2</div></td><td><span class="badge badge-nr">NR</span></td><td>2</td><td>6</td><td>MERV-14 (cc)</td><td>Max 60%</td></tr>
+        <tr><td><strong>ED public waiting</strong><div class="note">FGI 2.8-6.2.3</div></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>12</td><td>MERV-8</td><td>Max 65%</td></tr>
+        <tr><td><strong>Triage</strong><div class="note">FGI 2.8-6.2.2.2</div></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>12</td><td>MERV-8</td><td>Max 60%</td></tr>
+        <tr><td><strong>AII room (outpatient)</strong><div class="note">FGI 2.1-3.3.2 — min –0.01 in. w.g.</div></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>12</td><td>MERV-8</td><td>Max 60%</td></tr>
+        <tr><td><strong>Bronchoscopy</strong><div class="note">FGI 2.1-3.2.2.1 — §8.5.2: local exhaust required</div></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>12</td><td>MERV-14</td><td>NR</td></tr>
+      </tbody>
+    </table>
+  </div>
+  </div>
+
+  <div id="pt3" style="display:none">
+  <div class="card">
+    <div class="card-title">Residential health — nursing homes, Table 9-1</div>
+    <table class="room-table">
+      <thead><tr><th>Space</th><th>Pressure</th><th>OA ach</th><th>Total ach</th><th>Min MERV</th><th>Design RH</th></tr></thead>
+      <tbody>
+        <tr><td><strong>AII room (nursing home)</strong><div class="note">FGI 3.1-2.2.4.1 — §9.2.1 applies</div></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>12</td><td>MERV-14</td><td>Max 60%</td></tr>
+        <tr><td><strong>Resident room</strong><div class="note">FGI 3.1-2.2.2</div></td><td><span class="badge badge-nr">NR</span></td><td>2</td><td>2</td><td>MERV-14</td><td>Max 60%</td></tr>
+        <tr><td><strong>Resident living/activity/dining</strong><div class="note">FGI 3.1-2.3.3</div></td><td><span class="badge badge-nr">NR</span></td><td>4</td><td>4</td><td>MERV-14</td><td>Max 60%</td></tr>
+        <tr><td><strong>Toilet/bathing room</strong></td><td><span class="badge badge-neg">Negative</span></td><td>NR</td><td>10</td><td>MERV-14</td><td>NR</td></tr>
+        <tr><td><strong>Clean utility</strong><div class="note">FGI 2.3-4.2.5</div></td><td><span class="badge badge-pos">Positive</span></td><td>2</td><td>4</td><td>MERV-8 (k)*</td><td>NR</td></tr>
+        <tr><td><strong>Soiled utility / soiled holding</strong><div class="note">FGI 2.3-4.2.6</div></td><td><span class="badge badge-neg">Negative</span></td><td>2</td><td>10</td><td>MERV-8</td><td>NR</td></tr>
+      </tbody>
+    </table>
+    <div class="quote">Note (k): Minimum MERV-14 filters shall be required for spaces where sterile equipment is packed into sterile packages. — Table 9-1 Normative Note (k)</div>
+  </div>
+  </div>
+</div>
+
+<div id="page-calc" class="page">
+  <div class="page-title">Flow calculator — CFM &amp; pressure verification</div>
+  <div class="page-sub">Manual measurement verification tool — ASHRAE 170-2021 §7.2.1.d</div>
+
+  <div class="info-box">
+    §7.2.1.d: "The room envelope shall be sealed to provide a minimum differential pressure of 0.01 in. of water (2.5 Pa) across the envelope." §7.2.1.e: "Differential pressure between AII rooms and adjacent spaces shall be a minimum of –0.01 in. of water (–2.5 Pa)."
+  </div>
+
+  <div class="card">
+    <div class="card-title">Step 1 — Convert velocity to CFM</div>
+    <div class="quote" style="margin-bottom:1rem">Formula: CFM = Average Velocity (FPM) × Area of grille (ft²)</div>
+    <div class="calc-row">
+      <label>Average velocity (FPM)</label>
+      <input type="number" id="vel" value="350" oninput="calcCFM()">
+    </div>
+    <div class="calc-row">
+      <label>Grille width (inches)</label>
+      <input type="number" id="gw" value="12" oninput="calcCFM()">
+    </div>
+    <div class="calc-row">
+      <label>Grille height (inches)</label>
+      <input type="number" id="gh" value="12" oninput="calcCFM()">
+    </div>
+    <div class="calc-result">
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px">Grille area &amp; CFM result</div>
+      <div class="result-val neutral" id="cfm-result">350.0 CFM &nbsp;|&nbsp; Area: 1.00 ft²</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Step 2 — Pressure offset verification</div>
+    <div class="calc-row">
+      <label>Room type</label>
+      <select id="room-type" onchange="calcOffset()">
+        <option value="pos">Positive pressure room (OR, PE)</option>
+        <option value="neg" selected>Negative pressure room (AII, triage)</option>
+        <option value="bal">Balanced room</option>
+      </select>
+    </div>
+    <div class="calc-row">
+      <label>Total supply CFM</label>
+      <input type="number" id="supply" value="800" oninput="calcOffset()">
+    </div>
+    <div class="calc-row">
+      <label>Total return/exhaust CFM</label>
+      <input type="number" id="exhaust" value="850" oninput="calcOffset()">
+    </div>
+    <div class="calc-result">
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px">Offset result</div>
+      <div class="result-val" id="offset-result">–50 CFM offset</div>
+      <div class="result-status" id="offset-status"></div>
+    </div>
+    <div class="quote" style="margin-top:1rem">
+      For negative pressure rooms: CFM Exhaust − CFM Supply = positive offset (exhaust exceeds supply).<br>
+      For positive pressure rooms: CFM Supply − CFM Return/Exhaust = positive offset (supply exceeds exhaust).<br>
+      <strong>Note:</strong> CFM offset confirms airflow direction; differential pressure must be verified with a manometer/magnehelic gauge reading ≥ 0.01 in. w.g. (2.5 Pa) per §7.2.1.d. CFM offset alone does not confirm code compliance.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Step 3 — ACH compliance check</div>
+    <div class="calc-row">
+      <label>Room length (ft)</label>
+      <input type="number" id="rl" value="20" oninput="calcACH()">
+    </div>
+    <div class="calc-row">
+      <label>Room width (ft)</label>
+      <input type="number" id="rw" value="15" oninput="calcACH()">
+    </div>
+    <div class="calc-row">
+      <label>Ceiling height (ft)</label>
+      <input type="number" id="rh" value="9" oninput="calcACH()">
+    </div>
+    <div class="calc-row">
+      <label>Total supply/exhaust CFM</label>
+      <input type="number" id="rcfm" value="800" oninput="calcACH()">
+    </div>
+    <div class="calc-row">
+      <label>Required total ACH (from table)</label>
+      <input type="number" id="req-ach" value="12" oninput="calcACH()">
+    </div>
+    <div class="calc-result">
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:4px">Actual ACH</div>
+      <div class="result-val" id="ach-result"></div>
+      <div class="result-status" id="ach-status"></div>
+    </div>
+    <div class="quote">Formula: ACH = (CFM × 60) ÷ Room Volume (ft³). Room volume = L × W × H.</div>
+  </div>
+</div>
+
+<div id="page-humidity" class="page">
+  <div class="page-title">Humidity log — design RH ranges (FMS.36)</div>
+  <div class="page-sub">Design relative humidity requirements per ASHRAE 170-2021 Tables 7-1 and 8-1</div>
+
+  <div class="warn-box">
+    <strong>Unoccupied turndown warning (Table 7-1 Note ff / §A1.5):</strong> "If this space uses unoccupied turndown it shall include time-delay controls such that turndown does not occur for the first 20 minutes after the space becomes unoccupied." Humidity must not exceed 60% RH in turndown mode.
+  </div>
+
+  <div class="card">
+    <div class="card-title">Design RH ranges by space — Table 7-1</div>
+    <table class="rh-table">
+      <thead><tr><th>Space</th><th>Min RH%</th><th>Max RH%</th><th>Design Temp °F/°C</th><th>Visual range</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Operating room</strong><div style="font-size:11px;color:var(--color-text-secondary)">OR, Caesarean delivery, Class 3 imaging</div></td>
+          <td>20</td><td>60</td><td>68–75 / 20–24</td>
+          <td><div class="rh-bar"><div class="rh-fill" style="width:12px;margin-left:20px"></div><div style="font-size:11px;color:var(--color-text-secondary)">20–60%</div></div></td>
+        </tr>
+        <tr>
+          <td><strong>Phase I PACU / recovery</strong></td>
+          <td>20</td><td>60</td><td>70–75 / 21–24</td>
+          <td><div class="rh-bar"><div class="rh-fill" style="width:12px;margin-left:20px"></div><div style="font-size:11px;color:var(--color-text-secondary)">20–60%</div></div></td>
+        </tr>
+        <tr>
+          <td><strong>Critical care (ICU)</strong></td>
+          <td>30</td><td>60</td><td>70–75 / 21–24</td>
+          <td><div class="rh-bar"><div class="rh-fill" style="width:9px;margin-left:30px"></div><div style="font-size:11px;color:var(--color-text-secondary)">30–60%</div></div></td>
+        </tr>
+        <tr>
+          <td><strong>Newborn nursery</strong></td>
+          <td>30</td><td>60</td><td>72–78 / 22–26</td>
+          <td><div class="rh-bar"><div class="rh-fill" style="width:9px;margin-left:30px"></div><div style="font-size:11px;color:var(--color-text-secondary)">30–60%</div></div></td>
+        </tr>
+        <tr>
+          <td><strong>Neonatal intensive care (NICU)</strong></td>
+          <td>30</td><td>60</td><td>72–78 / 22–26</td>
+          <td><div class="rh-bar"><div class="rh-fill" style="width:9px;margin-left:30px"></div><div style="font-size:11px;color:var(--color-text-secondary)">30–60%</div></div></td>
+        </tr>
+        <tr>
+          <td><strong>Continued care nursery</strong></td>
+          <td>30</td><td>60</td><td>72–78 / 22–26</td>
+          <td><div class="rh-bar"><div class="rh-fill" style="width:9px;margin-left:30px"></div><div style="font-size:11px;color:var(--color-text-secondary)">30–60%</div></div></td>
+        </tr>
+        <tr>
+          <td><strong>AII room</strong></td>
+          <td>—</td><td>60</td><td>70–75 / 21–24</td>
+          <td><div class="rh-bar"><div class="rh-fill" style="width:18px;margin-left:0px"></div><div style="font-size:11px;color:var(--color-text-secondary)">Max 60%</div></div></td>
+        </tr>
+        <tr>
+          <td><strong>PE room (protective environment)</strong></td>
+          <td>—</td><td>60</td><td>70–75 / 21–24</td>
+          <td><div class="rh-bar"><div class="rh-fill" style="width:18px;margin-left:0px"></div><div style="font-size:11px;color:var(--color-text-secondary)">Max 60%</div></div></td>
+        </tr>
+        <tr>
+          <td><strong>Wound intensive care (burn unit)</strong></td>
+          <td>40</td><td>60</td><td>70–75 / 21–24</td>
+          <td><div class="rh-bar"><div class="rh-fill" style="width:6px;margin-left:40px"></div><div style="font-size:11px;color:var(--color-text-secondary)">40–60%</div></div></td>
+        </tr>
+        <tr>
+          <td><strong>Sterile storage (clean/sterile medical)</strong><div style="font-size:11px;color:var(--color-text-secondary)">FGI 2.1-5.1.2.2[4]</div></td>
+          <td>—</td><td>60</td><td>Max 75°F / 24°C</td>
+          <td><div class="rh-bar"><div class="rh-fill" style="width:18px;margin-left:0px"></div><div style="font-size:11px;color:var(--color-text-secondary)">Max 60%</div></div></td>
+        </tr>
+        <tr>
+          <td><strong>Patient room (general)</strong></td>
+          <td>—</td><td>60</td><td>70–75 / 21–24</td>
+          <td><div class="rh-bar"><div class="rh-fill" style="width:18px;margin-left:0px"></div><div style="font-size:11px;color:var(--color-text-secondary)">Max 60%</div></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Quick RH compliance checker</div>
+    <div class="calc-row">
+      <label>Measured RH (%)</label>
+      <input type="number" id="mRH" value="55" oninput="checkRH()">
+    </div>
+    <div class="calc-row">
+      <label>Space type</label>
+      <select id="rhRoom" onchange="checkRH()">
+        <option value="0,60">AII / PE / patient room (max 60%)</option>
+        <option value="20,60">OR / PACU / procedure room (20–60%)</option>
+        <option value="30,60">ICU / NICU / nursery (30–60%)</option>
+        <option value="40,60">Burn unit (40–60%)</option>
+        <option value="0,65">ED waiting / triage (max 65%)</option>
+      </select>
+    </div>
+    <div class="calc-result">
+      <div class="result-val" id="rh-check-val"></div>
+      <div class="result-status" id="rh-check-status"></div>
+    </div>
+  </div>
+</div>
+
+<div id="page-upload" class="page">
+  <div class="page-title">Upload evidence</div>
+  <div class="page-sub">Attach measurement records, equipment photos, and calibration certificates</div>
+
+  <div class="card">
+    <div class="card-title">Add new evidence file</div>
+    <div class="upload-zone" onclick="addFakeFile()">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="margin:0 auto;display:block"><rect x="6" y="8" width="20" height="22" rx="2" stroke="#B4B2A9" stroke-width="1.5"/><path d="M11 8V6a1 1 0 011-1h8a1 1 0 011 1v2M16 14v6M13 17l3-3 3 3" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <p>Click to attach photos, PDFs, or spreadsheets</p>
+      <p style="font-size:11px;margin-top:4px">Supported: JPG, PNG, PDF, XLSX — max 25 MB per file</p>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:0.75rem;flex-wrap:wrap">
+      <select id="ev-category" style="flex:1;min-width:140px">
+        <option>Manometer reading</option>
+        <option>Airflow measurement (CFM/FPM)</option>
+        <option>RH/temperature log</option>
+        <option>Filter inspection</option>
+        <option>Equipment calibration certificate</option>
+        <option>TAB report</option>
+        <option>Other</option>
+      </select>
+      <select id="ev-room" style="flex:1;min-width:140px">
+        <option>OR-01</option>
+        <option>AII-01</option>
+        <option>ICU bay</option>
+        <option>CSSD soiled workroom</option>
+        <option>Emergency triage</option>
+        <option>NICU</option>
+        <option>Sterile storage</option>
+        <option>Lab work area</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Uploaded files <span class="badge badge-ok" id="file-count">3 files</span></div>
+    <ul class="file-list" id="file-list">
+      <li><div class="file-icon">PDF</div><div style="flex:1"><div style="font-weight:500">OR01_pressure_reading_2025-04.pdf</div><div style="font-size:11px;color:var(--color-text-secondary)">Manometer reading — OR-01 — 14 Apr 2025</div></div><span class="badge badge-ok">Verified</span></li>
+      <li><div class="file-icon">IMG</div><div style="flex:1"><div style="font-weight:500">AII_room_magnahelic_gauge.jpg</div><div style="font-size:11px;color:var(--color-text-secondary)">Manometer reading — AII-01 — 14 Apr 2025</div></div><span class="badge badge-warn">Pending review</span></li>
+      <li><div class="file-icon">XLS</div><div style="flex:1"><div style="font-weight:500">RH_daily_log_April2025.xlsx</div><div style="font-size:11px;color:var(--color-text-secondary)">RH/temperature log — all zones — Apr 2025</div></div><span class="badge badge-ok">Verified</span></li>
+    </ul>
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="exportPDF()">Include in PDF report</button>
+      <button class="btn">Download all</button>
+    </div>
+  </div>
+</div>
+
+<div id="page-report" class="page">
+  <div class="page-title">Corrective action report — ASHRAE 170-2021 standard references</div>
+  <div class="page-sub">Formal response documentation with normative standard citations</div>
+
+  <div class="card">
+    <div class="card-title">Immediate corrective actions — completed</div>
+    <table class="report-table">
+      <thead><tr><th style="width:24px"></th><th>Action taken</th><th>ASHRAE 170-2021 citation</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><div class="timeline-dot dot-done"></div></td>
+          <td><strong>Manual measurement device provided</strong><div class="note">Manometer and anemometer procured for daily pressure/velocity readings by designated responsible person.</div></td>
+          <td><div class="quote" style="margin:0">§7.2.1.a: "AII rooms shall have a permanently installed device and/or mechanism to constantly monitor the differential air pressure... A local visual means shall be provided to indicate whenever negative differential pressure is not maintained."</div></td>
+          <td><span class="badge badge-ok">Done</span></td>
+        </tr>
+        <tr>
+          <td><div class="timeline-dot dot-done"></div></td>
+          <td><strong>Daily measurement log &amp; responsible person assigned</strong><div class="note">Designated staff member conducts and records pressure/airflow measurements each shift.</div></td>
+          <td><div class="quote" style="margin:0">§10.2.5: "Owners shall retain an acceptance testing report... the design shall include requirements for O&M staff training that is sufficient for the staff to keep all HVAC equipment in a condition that will maintain the original design intent for ventilation."</div></td>
+          <td><span class="badge badge-ok">Done</span></td>
+        </tr>
+        <tr>
+          <td><div class="timeline-dot dot-done"></div></td>
+          <td><strong>Door signage installed (Positive / Negative / Balanced)</strong><div class="note">Visual indicators placed on all pressure-controlled rooms to aid staff awareness of pressure classification.</div></td>
+          <td><div class="quote" style="margin:0">§7.2.1.a: "A local visual means shall be provided to indicate whenever negative differential pressure is not maintained." §7.4.1: Positive pressure must be maintained "at all times" in ORs and Class 3 imaging rooms.</div></td>
+          <td><span class="badge badge-ok">Done</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Development plan — upcoming milestones</div>
+    <table class="report-table">
+      <thead><tr><th style="width:24px"></th><th>Action</th><th>Target</th><th>ASHRAE 170-2021 citation</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><div class="timeline-dot dot-plan"></div></td>
+          <td><strong>Standard operating procedures (SOP) — ventilation monitoring</strong><div class="note">Written procedures for daily pressure checks, ACH verification, RH logging, and escalation protocol.</div></td>
+          <td>2 weeks</td>
+          <td><div class="quote" style="margin:0">Appendix A (O&M): "Each OR should be tested for positive pressure semiannually... AII rooms should be tested for negative pressure daily whenever an infectious patient is present."</div></td>
+          <td><span class="badge badge-warn">In progress</span></td>
+        </tr>
+        <tr>
+          <td><div class="timeline-dot dot-plan"></div></td>
+          <td><strong>Instrument calibration schedule &amp; specialist HVAC design review</strong><div class="note">Calibration records for all manometers/gauges; independent review of supply/return airflow balance by qualified TAB contractor.</div></td>
+          <td>1 month</td>
+          <td><div class="quote" style="margin:0">§10.2.2: "HVAC systems shall be balanced in accordance with one of the following national standards: ASHRAE Standard 111, AABC, NEBB, or TABB for airflows, water flows, and relative room air pressurization."</div></td>
+          <td><span class="badge badge-nr">Planned</span></td>
+        </tr>
+        <tr>
+          <td><div class="timeline-dot dot-future"></div></td>
+          <td><strong>BMS continuous monitoring feasibility study</strong><div class="note">Evaluate building management system (BMS) integration for real-time pressure alarming and 24/7 logging for AII, PE, and OR spaces.</div></td>
+          <td>3 months</td>
+          <td><div class="quote" style="margin:0">§7.2.1.a: "Each AII room shall have a permanently installed device and/or mechanism to constantly monitor the differential air pressure... A local visual means shall be provided to indicate whenever negative differential pressure is not maintained." §6.1.1: ventilation must be maintained even upon loss of normal electrical power.</div></td>
+          <td><span class="badge badge-nr">Planned</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-title">ASHRAE consultant recommendations</div>
+    <div style="font-size:13px;line-height:1.7;color:var(--color-text-primary)">
+      <p style="margin-bottom:0.75rem"><strong>1. Pressure monitoring permanency (§7.2.1.a):</strong> Manual manometer readings satisfy interim compliance verification, but the standard requires a <em>permanently installed</em> monitoring device for AII and PE rooms. The BMS feasibility study (3-month milestone) should prioritize these rooms as a code-required upgrade, not merely an improvement.</p>
+      <p style="margin-bottom:0.75rem"><strong>2. CSSD soiled workroom gap (Table 7-1):</strong> The soiled decontamination area requires negative pressure with 2 OA ach and 6 total ach minimum, with 100% exhaust to outdoors. Verify that existing exhaust ductwork discharges directly outdoors with no recirculation, per §6.3.2.1.</p>
+      <p style="margin-bottom:0.75rem"><strong>3. Laboratory ACH flexibility (Table 7-1, Note f):</strong> If lab ACH falls below 6 total ach, the facility must document a formal hazard assessment per AIHA/ASSE Z9.5 to support a lower rate. This assessment must be retained as a compliance document per §4.3.</p>
+      <p><strong>4. Unoccupied turndown humidity control (Table 7-1, Note ff / §A1.5):</strong> All spaces with turndown enabled must have time-delay controls preventing activation within 20 minutes of becoming unoccupied, and humidity control maintaining ≤60% RH during setback.</p>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-primary" onclick="exportPDF()">Export full PDF report</button>
+    <button class="btn">Print preview</button>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+function nav(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+function pressTab(el,id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['pt1','pt2','pt3'].forEach(i=>{var e=document.getElementById(i);if(e)e.style.display='none';});
+  document.getElementById(id).style.display='block';
+}
+function calcCFM(){
+  var v=parseFloat(document.getElementById('vel').value)||0;
+  var w=parseFloat(document.getElementById('gw').value)||0;
+  var h=parseFloat(document.getElementById('gh').value)||0;
+  var area=(w*h)/144;
+  var cfm=v*area;
+  document.getElementById('cfm-result').textContent=cfm.toFixed(1)+' CFM  |  Area: '+area.toFixed(2)+' ft²';
+}
+function calcOffset(){
+  var type=document.getElementById('room-type').value;
+  var sup=parseFloat(document.getElementById('supply').value)||0;
+  var exh=parseFloat(document.getElementById('exhaust').value)||0;
+  var offset, label, statusEl=document.getElementById('offset-status'), resEl=document.getElementById('offset-result');
+  if(type==='pos'){
+    offset=sup-exh;
+    label='Supply − Exhaust = '+offset.toFixed(0)+' CFM';
+    resEl.textContent=label;
+    if(offset>0){statusEl.className='result-status comply';statusEl.textContent='Positive offset confirmed — supply exceeds exhaust. Verify with manometer ≥ +0.01 in. w.g.';}
+    else{statusEl.className='result-status fail';statusEl.textContent='Airflow does not support positive pressure. Investigate supply/return balance.';}
+  } else if(type==='neg'){
+    offset=exh-sup;
+    label='Exhaust − Supply = '+offset.toFixed(0)+' CFM';
+    resEl.textContent=label;
+    if(offset>0){statusEl.className='result-status comply';statusEl.textContent='Negative offset confirmed — exhaust exceeds supply. Verify with manometer ≥ –0.01 in. w.g.';}
+    else{statusEl.className='result-status fail';statusEl.textContent='Airflow does not support negative pressure. Investigate exhaust/supply balance.';}
+  } else {
+    offset=sup-exh;
+    label='Offset = '+offset.toFixed(0)+' CFM';
+    resEl.textContent=label;
+    statusEl.className='result-status neutral';statusEl.textContent='Balanced room — aim for near-zero offset.';
+  }
+}
+function calcACH(){
+  var l=parseFloat(document.getElementById('rl').value)||0;
+  var w=parseFloat(document.getElementById('rw').value)||0;
+  var h=parseFloat(document.getElementById('rh').value)||0;
+  var cfm=parseFloat(document.getElementById('rcfm').value)||0;
+  var req=parseFloat(document.getElementById('req-ach').value)||1;
+  var vol=l*w*h;
+  if(vol===0){document.getElementById('ach-result').textContent='Enter room dimensions';return;}
+  var ach=(cfm*60)/vol;
+  var resEl=document.getElementById('ach-result'), statEl=document.getElementById('ach-status');
+  resEl.textContent='Actual ACH: '+ach.toFixed(1)+'  (Required: '+req.toFixed(0)+')';
+  if(ach>=req){resEl.className='result-val comply';statEl.className='result-status comply';statEl.textContent='Compliant — actual ACH meets or exceeds ASHRAE 170 minimum.';}
+  else{resEl.className='result-val fail';statEl.className='result-status fail';statEl.textContent='Non-compliant — actual ACH is below the Table minimum. Increase supply/exhaust airflow.';}
+}
+function checkRH(){
+  var val=parseFloat(document.getElementById('mRH').value)||0;
+  var range=document.getElementById('rhRoom').value.split(',');
+  var mn=parseFloat(range[0]),mx=parseFloat(range[1]);
+  var resEl=document.getElementById('rh-check-val'), statEl=document.getElementById('rh-check-status');
+  resEl.textContent='Measured: '+val.toFixed(0)+'%  |  Required: '+(mn>0?mn+'–':'')+mx+'%';
+  if(val<=mx && val>=mn){resEl.className='result-val comply';statEl.className='result-status comply';statEl.textContent='Within ASHRAE 170 design RH range.';}
+  else if(val>mx){resEl.className='result-val fail';statEl.className='result-status fail';statEl.textContent='EXCEEDS maximum RH. Risk of condensation and microbial growth. Review humidification controls.';}
+  else{resEl.className='result-val fail';statEl.className='result-status fail';statEl.textContent='BELOW minimum RH. Review humidification supply.';}
+}
+var fakeCount=3;
+function addFakeFile(){
+  fakeCount++;
+  var cat=document.getElementById('ev-category').value;
+  var room=document.getElementById('ev-room').value;
+  var li=document.createElement('li');
+  li.innerHTML='<div class="file-icon">NEW</div><div style="flex:1"><div style="font-weight:500">'+room.replace(/\s/g,'_')+'_'+cat.split(' ')[0]+'_evidence.pdf</div><div style="font-size:11px;color:var(--color-text-secondary)">'+cat+' — '+room+' — just uploaded</div></div><span class="badge badge-warn">Pending review</span>';
+  document.getElementById('file-list').appendChild(li);
+  document.getElementById('file-count').textContent=fakeCount+' files';
+}
+function exportPDF(){
+  alert('PDF export: In a production deployment this triggers a server-side PDF render (e.g. Puppeteer / WeasyPrint) bundling all compliance tables, ASHRAE 170-2021 citations, measurement logs, uploaded evidence, and the corrective action report into a single print-ready document.\n\nAll data shown in this application is sourced from ANSI/ASHRAE/ASHE Standard 170-2021.');
+}
+calcCFM(); calcOffset(); calcACH(); checkRH();
+</script>
