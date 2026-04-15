@@ -48,6 +48,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .ref-badge {
@@ -56,6 +58,44 @@
             border-radius: 30px;
             font-size: 14px;
             font-weight: 600;
+        }
+        
+        /* Editable Fields */
+        .editable-field {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px dashed rgba(255, 255, 255, 0.4);
+            border-radius: 4px;
+            padding: 2px 8px;
+            cursor: text;
+            transition: all 0.2s;
+            display: inline-block;
+            min-width: 120px;
+        }
+        
+        .editable-field:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .editable-field:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-color: white;
+        }
+        
+        .header-info {
+            margin-top: 15px;
+            font-size: 14px;
+            opacity: 0.9;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px 30px;
+        }
+        
+        .header-info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         /* Content */
@@ -236,8 +276,59 @@
             padding: 30px;
             border-radius: 6px;
             color: #6c8298;
-            font-style: italic;
             border: 1px solid #cfdbe6;
+        }
+        
+        /* Link Styling */
+        .appendix-link {
+            display: inline-block;
+            background: #00a1ab;
+            color: white !important;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-decoration: none;
+            margin-top: 8px;
+            transition: all 0.2s;
+            font-style: normal;
+            cursor: pointer;
+        }
+        
+        .appendix-link:hover {
+            background: #0d2b4e;
+            transform: translateY(-1px);
+        }
+        
+        .link-input-container {
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .link-input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+        
+        .edit-link-btn {
+            background: none;
+            border: 1px solid #00a1ab;
+            color: #00a1ab;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            margin-left: 8px;
+            transition: all 0.2s;
+        }
+        
+        .edit-link-btn:hover {
+            background: #00a1ab;
+            color: white;
         }
         
         /* Footer */
@@ -253,6 +344,7 @@
         .dual-lang {
             display: flex;
             justify-content: space-between;
+            gap: 20px;
         }
         
         .lang-block {
@@ -283,10 +375,40 @@
             box-shadow: 0 6px 20px rgba(13,43,78,0.3);
         }
         
+        .save-btn {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(40,167,69,0.4);
+            transition: all 0.3s;
+            border: none;
+            z-index: 1000;
+        }
+        
+        .save-btn:hover {
+            background: #1e7e34;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(30,126,52,0.3);
+        }
+        
         @media print {
             body { background: white; padding: 0; }
-            .print-btn { display: none; }
+            .print-btn, .save-btn { display: none; }
             .report-container { box-shadow: none; }
+            .editable-field { 
+                background: transparent; 
+                border: none; 
+                padding: 0;
+            }
+            .edit-link-btn { display: none; }
         }
         
         .highlight {
@@ -312,10 +434,21 @@
             <h1 style="font-size: 22px; margin-top: 5px;">تقرير الامتثال لمعايير التهوية في منشآت الرعاية الصحية</h1>
             <div class="subtitle">
                 <span>FMS.35 & FMS.36 - Airflow & Humidity Verification</span>
-                <span class="ref-badge">Document No: FMS-ASHRAE-2024-001</span>
+                <span class="ref-badge">Document No: <span class="editable-field" contenteditable="true" id="doc-number">FMS-ASHRAE-2024-001</span></span>
             </div>
-            <div style="margin-top: 15px; font-size: 14px; opacity: 0.85;">
-                <strong>Facility:</strong> [اسم المنشأة] &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Date:</strong> [التاريخ] &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Prepared by:</strong> [اسم المُعد]
+            <div class="header-info">
+                <div class="header-info-item">
+                    <strong>Facility:</strong> 
+                    <span class="editable-field" contenteditable="true" id="facility-name">[اسم المنشأة]</span>
+                </div>
+                <div class="header-info-item">
+                    <strong>Date:</strong> 
+                    <span class="editable-field" contenteditable="true" id="report-date">[التاريخ]</span>
+                </div>
+                <div class="header-info-item">
+                    <strong>Prepared by:</strong> 
+                    <span class="editable-field" contenteditable="true" id="prepared-by">[اسم المُعد]</span>
+                </div>
             </div>
         </div>
         
@@ -640,10 +773,11 @@
             </div>
             
             <p style="margin-bottom: 20px; color: #5a6c7e;">
-                The following templates are provided for documenting ongoing compliance. Actual completed logs are maintained in the facility's quality department.
+                The following templates are provided for documenting ongoing compliance. Click on the green links below to access the full documents.
             </p>
             
             <div class="appendix-grid">
+                <!-- Appendix A -->
                 <div class="appendix-card">
                     <h4>📋 Appendix A</h4>
                     <div class="appendix-placeholder">
@@ -654,10 +788,16 @@
                             <tr><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td></tr>
                         </table>
                         <br>
-                        <span style="color: #00a1ab;">[مساحة مخصصة لإرفاق النموذج الكامل]</span>
+                        <a href="#" id="linkA" class="appendix-link" target="_blank" style="color: white;">🔗 رابط النموذج الكامل</a>
+                        <button class="edit-link-btn" onclick="editLink('A')">✏️ تعديل الرابط</button>
+                        <div id="linkInputA" class="link-input-container">
+                            <input type="text" id="urlA" class="link-input" placeholder="أدخل رابط النموذج هنا..." value="#">
+                            <button onclick="saveLink('A')" style="margin-top:5px; padding:4px 10px; background:#00a1ab; color:white; border:none; border-radius:4px; cursor:pointer;">حفظ</button>
+                        </div>
                     </div>
                 </div>
                 
+                <!-- Appendix B -->
                 <div class="appendix-card">
                     <h4>📋 Appendix B</h4>
                     <div class="appendix-placeholder">
@@ -667,10 +807,16 @@
                             <tr><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td><td>____</td></tr>
                         </table>
                         <br>
-                        <span style="color: #00a1ab;">[مساحة مخصصة لإرفاق سجل الرطوبة اليومي]</span>
+                        <a href="#" id="linkB" class="appendix-link" target="_blank" style="color: white;">🔗 رابط سجل الرطوبة اليومي</a>
+                        <button class="edit-link-btn" onclick="editLink('B')">✏️ تعديل الرابط</button>
+                        <div id="linkInputB" class="link-input-container">
+                            <input type="text" id="urlB" class="link-input" placeholder="أدخل رابط النموذج هنا..." value="#">
+                            <button onclick="saveLink('B')" style="margin-top:5px; padding:4px 10px; background:#00a1ab; color:white; border:none; border-radius:4px; cursor:pointer;">حفظ</button>
+                        </div>
                     </div>
                 </div>
                 
+                <!-- Appendix C -->
                 <div class="appendix-card">
                     <h4>📋 Appendix C</h4>
                     <div class="appendix-placeholder">
@@ -681,10 +827,16 @@
                             <tr><td>____</td><td>____</td><td>____</td><td>____</td></tr>
                         </table>
                         <br>
-                        <span style="color: #00a1ab;">[إرفاق كشوف الحضور الموقعة]</span>
+                        <a href="#" id="linkC" class="appendix-link" target="_blank" style="color: white;">🔗 رابط كشوف الحضور الموقعة</a>
+                        <button class="edit-link-btn" onclick="editLink('C')">✏️ تعديل الرابط</button>
+                        <div id="linkInputC" class="link-input-container">
+                            <input type="text" id="urlC" class="link-input" placeholder="أدخل رابط النموذج هنا..." value="#">
+                            <button onclick="saveLink('C')" style="margin-top:5px; padding:4px 10px; background:#00a1ab; color:white; border:none; border-radius:4px; cursor:pointer;">حفظ</button>
+                        </div>
                     </div>
                 </div>
                 
+                <!-- Appendix D -->
                 <div class="appendix-card">
                     <h4>📋 Appendix D</h4>
                     <div class="appendix-placeholder">
@@ -696,7 +848,12 @@
                             <li>• Due Date: _____</li>
                         </ul>
                         <br>
-                        <span style="color: #00a1ab;">[إرفاق شهادات المعايرة]</span>
+                        <a href="#" id="linkD" class="appendix-link" target="_blank" style="color: white;">🔗 رابط شهادات المعايرة</a>
+                        <button class="edit-link-btn" onclick="editLink('D')">✏️ تعديل الرابط</button>
+                        <div id="linkInputD" class="link-input-container">
+                            <input type="text" id="urlD" class="link-input" placeholder="أدخل رابط النموذج هنا..." value="#">
+                            <button onclick="saveLink('D')" style="margin-top:5px; padding:4px 10px; background:#00a1ab; color:white; border:none; border-radius:4px; cursor:pointer;">حفظ</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -737,10 +894,91 @@
     </div>
     
     <button class="print-btn" onclick="window.print()">📄 تصدير PDF / Export PDF</button>
+    <button class="save-btn" onclick="saveAllData()">💾 حفظ جميع البيانات</button>
     
     <script>
-        // Smooth scroll and print functionality
-        console.log('ASHRAE 170 Compliance Report - Ready for Export');
+        // Function to edit link
+        function editLink(letter) {
+            var inputDiv = document.getElementById('linkInput' + letter);
+            if (inputDiv.style.display === 'block') {
+                inputDiv.style.display = 'none';
+            } else {
+                inputDiv.style.display = 'block';
+            }
+        }
+        
+        // Function to save link
+        function saveLink(letter) {
+            var urlInput = document.getElementById('url' + letter);
+            var linkElement = document.getElementById('link' + letter);
+            var newUrl = urlInput.value;
+            
+            if (newUrl && newUrl !== '#') {
+                linkElement.href = newUrl;
+                linkElement.textContent = '🔗 ' + (letter === 'A' ? 'رابط النموذج الكامل' : 
+                                               letter === 'B' ? 'رابط سجل الرطوبة اليومي' : 
+                                               letter === 'C' ? 'رابط كشوف الحضور الموقعة' : 
+                                               'رابط شهادات المعايرة');
+            }
+            
+            document.getElementById('linkInput' + letter).style.display = 'none';
+            
+            // Save to localStorage
+            localStorage.setItem('appendixLink' + letter, newUrl);
+        }
+        
+        // Load saved links from localStorage
+        function loadSavedLinks() {
+            var letters = ['A', 'B', 'C', 'D'];
+            letters.forEach(function(letter) {
+                var savedUrl = localStorage.getItem('appendixLink' + letter);
+                if (savedUrl) {
+                    document.getElementById('url' + letter).value = savedUrl;
+                    document.getElementById('link' + letter).href = savedUrl;
+                }
+            });
+        }
+        
+        // Save all editable data to localStorage
+        function saveAllData() {
+            // Save header fields
+            localStorage.setItem('facilityName', document.getElementById('facility-name').innerText);
+            localStorage.setItem('reportDate', document.getElementById('report-date').innerText);
+            localStorage.setItem('preparedBy', document.getElementById('prepared-by').innerText);
+            localStorage.setItem('docNumber', document.getElementById('doc-number').innerText);
+            
+            alert('✅ تم حفظ جميع البيانات بنجاح! سيتم استعادتها تلقائياً عند فتح الصفحة مرة أخرى.');
+        }
+        
+        // Load saved header data from localStorage
+        function loadSavedData() {
+            var facilityName = localStorage.getItem('facilityName');
+            var reportDate = localStorage.getItem('reportDate');
+            var preparedBy = localStorage.getItem('preparedBy');
+            var docNumber = localStorage.getItem('docNumber');
+            
+            if (facilityName) document.getElementById('facility-name').innerText = facilityName;
+            if (reportDate) document.getElementById('report-date').innerText = reportDate;
+            if (preparedBy) document.getElementById('prepared-by').innerText = preparedBy;
+            if (docNumber) document.getElementById('doc-number').innerText = docNumber;
+        }
+        
+        // Initialize on page load
+        window.onload = function() {
+            loadSavedData();
+            loadSavedLinks();
+            console.log('ASHRAE 170 Compliance Report - Ready with editable fields and links');
+        };
+        
+        // Auto-save when editing header fields
+        document.addEventListener('DOMContentLoaded', function() {
+            var editableFields = document.querySelectorAll('.editable-field');
+            editableFields.forEach(function(field) {
+                field.addEventListener('blur', function() {
+                    saveAllData();
+                });
+            });
+        });
     </script>
 </body>
 </html>
